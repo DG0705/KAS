@@ -1,15 +1,21 @@
+import os
 from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator
-
 
 MAX_SELFIE_UPLOAD_SIZE = 5 * 1024 * 1024
-
-validate_image_extension = FileExtensionValidator(
-    allowed_extensions=["jpg", "jpeg", "png", "webp"]
-)
-
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def validate_selfie_file(file_obj):
-    validate_image_extension(file_obj)
-    if file_obj.size > MAX_SELFIE_UPLOAD_SIZE:
+    # 1. Check size (skip if size is missing due to Cloudinary storage)
+    if file_obj.size is not None and file_obj.size > MAX_SELFIE_UPLOAD_SIZE:
         raise ValidationError("Selfie image must be 5 MB or smaller.")
+
+    # 2. Extract the file extension
+    ext = os.path.splitext(file_obj.name)[1].lower()
+
+    # 3. Skip extension validation if the extension is empty (e.g. Cloudinary dynamic URLs)
+    if ext == "":
+        return
+
+    # 4. Validate the extension for new uploads
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValidationError(f"File extension '{ext}' is not allowed. Allowed extensions are: jpg, jpeg, png, webp.")
