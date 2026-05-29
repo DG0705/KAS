@@ -1,13 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/attendance_record.dart';
 import '../services/attendance_service.dart';
 import '../services/camera_service.dart';
-import '../services/location_service.dart';
 import '../utils/api_exception.dart';
 import '../widgets/app_error_banner.dart';
 import '../widgets/primary_button.dart';
@@ -16,12 +14,10 @@ class PunchInScreen extends StatefulWidget {
   const PunchInScreen({
     super.key,
     required this.attendanceService,
-    this.locationService,
     this.cameraService,
   });
 
   final AttendanceService attendanceService;
-  final LocationService? locationService;
   final CameraService? cameraService;
 
   @override
@@ -29,37 +25,13 @@ class PunchInScreen extends StatefulWidget {
 }
 
 class _PunchInScreenState extends State<PunchInScreen> {
-  // --- GEOFENCE CONSTANTS ---
-  final double officeLat = 19.13598270198228;
-  final double officeLon = 72.82766046243769; 
-  final double allowedRadius = 100.0;
-
   AttendanceType _attendanceType = AttendanceType.office;
-  Position? _position;
   XFile? _selfie;
-  late final LocationService _locationService =
-      widget.locationService ?? LocationService();
   late final CameraService _cameraService = widget.cameraService ?? CameraService();
-  bool _isGettingLocation = false;
+  
   bool _isCapturingSelfie = false;
   bool _isSubmitting = false;
   String? _error;
-
-  Future<void> _getLocation() async {
-    setState(() {
-      _isGettingLocation = true;
-      _error = null;
-    });
-
-    try {
-      final position = await _locationService.getCurrentPosition();
-      if (mounted) setState(() => _position = position);
-    } catch (error) {
-      setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isGettingLocation = false);
-    }
-  }
 
   Future<void> _captureSelfie() async {
     setState(() {
@@ -80,37 +52,6 @@ class _PunchInScreenState extends State<PunchInScreen> {
   Future<void> _submit() async {
     setState(() => _error = null);
 
-    var position = _position;
-    if (position == null) {
-      await _getLocation();
-      position = _position;
-    }
-
-    if (position == null) {
-      setState(() => _error = 'GPS location is required before punch in.');
-      return;
-    }
-
-    // ==========================================
-    // 🚧 THE GEOFENCE LOGIC GATE
-    // ==========================================
-    if (_attendanceType == AttendanceType.office) {
-      double distanceInMeters = Geolocator.distanceBetween(
-        officeLat,
-        officeLon,
-        position.latitude,
-        position.longitude,
-      );
-
-      if (distanceInMeters > allowedRadius) {
-        setState(() {
-          _error = 'Too far! You are ${distanceInMeters.toInt()}m away from the office. Must be within 50m.';
-        });
-        return; // This blocks the submission!
-      }
-    }
-    // ==========================================
-
     if (_selfie == null) {
       setState(() => _error = 'Selfie photo is required before punch in.');
       return;
@@ -119,12 +60,12 @@ class _PunchInScreenState extends State<PunchInScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // 🚨 Calling the API with just the Selfie and Type!
       await widget.attendanceService.punchIn(
-        latitude: position.latitude,
-        longitude: position.longitude,
         selfie: _selfie!,
         attendanceType: _attendanceType,
       );
+      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Punch in successful.')),
@@ -176,44 +117,9 @@ class _PunchInScreenState extends State<PunchInScreen> {
             },
           ),
           const SizedBox(height: 18),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined),
-                      const SizedBox(width: 8),
-                      Text(
-                        'GPS Location',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _position == null
-                        ? 'No location captured yet.'
-                        : '${_position!.latitude.toStringAsFixed(6)}, ${_position!.longitude.toStringAsFixed(6)}',
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _isGettingLocation ? null : _getLocation,
-                    icon: _isGettingLocation
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location),
-                    label: const Text('Capture GPS'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+          
+          // 🚨 GPS UI CARD HAS BEEN COMPLETELY REMOVED!
+
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),

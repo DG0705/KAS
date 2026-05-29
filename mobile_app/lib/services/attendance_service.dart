@@ -9,19 +9,14 @@ class AttendanceService {
   final ApiClient _apiClient;
 
   Future<AttendanceRecord> punchIn({
-    required double latitude,
-    required double longitude,
+    // 🚨 GPS variables completely removed!
     required XFile selfie,
     required AttendanceType attendanceType,
   }) async {
     final json = await _apiClient.postMultipart(
       '/attendance/punch-in/',
       fields: {
-        // 🚨 Appending exact GPS coordinates for the Django geofence
-        'latitude': latitude.toString(),
-        'longitude': longitude.toString(),
-        // Ensure this matches the field name in your Django PunchInSerializer
-        'type': attendanceType.value, 
+        'type': attendanceType.value,
       },
       fileField: 'selfie',
       filePath: selfie.path,
