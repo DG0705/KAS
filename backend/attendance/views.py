@@ -1,4 +1,3 @@
-import math
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -9,27 +8,19 @@ from rest_framework.views import APIView
 from .models import Attendance
 from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer
 
-# --- 1. Define Office Coordinates and Radius ---
-# 🚨 REPLACE THESE WITH YOUR EXACT GOOGLE MAPS COORDINATES
-OFFICE_LAT = 19.13598270198228
-OFFICE_LON = 772.82766046243769
-ALLOWED_RADIUS_METERS = 50
 
+# --- 1. Define Office Wi-Fi IP ---
+# 🚨 REPLACE THIS WITH YOUR ACTUAL OFFICE IP (Search "What is my IP" on office Wi-Fi)
+OFFICE_IP = "223.181.60.234" 
 
-# --- 2. Distance Calculator (Haversine Formula) ---
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371000  # Radius of Earth in meters
-    phi_1 = math.radians(lat1)
-    phi_2 = math.radians(lat2)
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_phi / 2.0) ** 2 + \
-        math.cos(phi_1) * math.cos(phi_2) * \
-        math.sin(delta_lambda / 2.0) ** 2
-    
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+def get_client_ip(request):
+    """Extracts the real IP address of the mobile phone, even on Render"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 
 class PunchInView(APIView):
@@ -37,28 +28,18 @@ class PunchInView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        # --- 3. Geofence Security Check ---
-        try:
-            # Extract coordinates from the incoming mobile app request
-            user_lat = float(request.data.get('latitude'))
-            user_lon = float(request.data.get('longitude'))
-        except (TypeError, ValueError):
+        # --- 2. The Wi-Fi Security Gate ---
+        user_ip = get_client_ip(request)
+        attendance_type = request.data.get('type')
+        
+        # We only enforce the Wi-Fi check if they select "Office"
+        if attendance_type == 'office' and user_ip != OFFICE_IP:
             return Response(
-                {"detail": "Location coordinates (latitude and longitude) are required to punch in."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Calculate exact distance
-        distance = calculate_distance(OFFICE_LAT, OFFICE_LON, user_lat, user_lon)
-
-        # Block the punch-in if they are outside the 50m radius
-        if distance > ALLOWED_RADIUS_METERS:
-            return Response(
-                {"detail": f"Too far! You are {int(distance)} meters away. Must be within {ALLOWED_RADIUS_METERS}m of the office."},
+                {"detail": f"You must be connected to the Office Wi-Fi to punch in. (Detected IP: {user_ip})" },
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # --- 4. Proceed with normal Punch-In if distance is valid ---
+        # --- 3. Proceed with normal Punch-In ---
         serializer = PunchInSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         attendance = serializer.save()
