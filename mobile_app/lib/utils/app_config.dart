@@ -1,6 +1,4 @@
 class AppConfig {
-  static const apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api',
-  );
+  // 🚨 We removed String.fromEnvironment so it cannot possibly use the local IP
+  static const String apiBaseUrl = 'https://kas-j2r9.onrender.com/api'; 
 }
