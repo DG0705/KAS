@@ -17,9 +17,11 @@ class AttendanceService {
     final json = await _apiClient.postMultipart(
       '/attendance/punch-in/',
       fields: {
-        'latitude': latitude.toStringAsFixed(6),
-        'longitude': longitude.toStringAsFixed(6),
-        'attendance_type': attendanceType.value,
+        // 🚨 Appending exact GPS coordinates for the Django geofence
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        // Ensure this matches the field name in your Django PunchInSerializer
+        'type': attendanceType.value, 
       },
       fileField: 'selfie',
       filePath: selfie.path,
