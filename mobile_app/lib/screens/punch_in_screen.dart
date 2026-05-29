@@ -29,6 +29,11 @@ class PunchInScreen extends StatefulWidget {
 }
 
 class _PunchInScreenState extends State<PunchInScreen> {
+  // --- GEOFENCE CONSTANTS ---
+  final double officeLat = 19.13598270198228;
+  final double officeLon = 72.82766046243769; 
+  final double allowedRadius = 100.0;
+
   AttendanceType _attendanceType = AttendanceType.office;
   Position? _position;
   XFile? _selfie;
@@ -85,6 +90,26 @@ class _PunchInScreenState extends State<PunchInScreen> {
       setState(() => _error = 'GPS location is required before punch in.');
       return;
     }
+
+    // ==========================================
+    // 🚧 THE GEOFENCE LOGIC GATE
+    // ==========================================
+    if (_attendanceType == AttendanceType.office) {
+      double distanceInMeters = Geolocator.distanceBetween(
+        officeLat,
+        officeLon,
+        position.latitude,
+        position.longitude,
+      );
+
+      if (distanceInMeters > allowedRadius) {
+        setState(() {
+          _error = 'Too far! You are ${distanceInMeters.toInt()}m away from the office. Must be within 50m.';
+        });
+        return; // This blocks the submission!
+      }
+    }
+    // ==========================================
 
     if (_selfie == null) {
       setState(() => _error = 'Selfie photo is required before punch in.');
