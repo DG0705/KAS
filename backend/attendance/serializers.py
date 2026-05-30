@@ -40,10 +40,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class PunchInSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
-        fields = ("latitude", "longitude", "selfie", "attendance_type")
+        # 🚨 Latitude and Longitude completely removed from expected input fields
+        fields = ("selfie", "attendance_type")
         extra_kwargs = {
-            "latitude": {"required": True},
-            "longitude": {"required": True},
             "selfie": {"required": True},
             "attendance_type": {"required": True},
         }

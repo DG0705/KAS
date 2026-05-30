@@ -37,16 +37,23 @@ class Attendance(models.Model):
     )
     punch_in = models.DateTimeField(default=timezone.now)
     punch_out = models.DateTimeField(null=True, blank=True)
+    
+    # 🚨 Updated to allow blank/null values since we use Wi-Fi IP now
     latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
         validators=[MinValueValidator(Decimal("-90")), MaxValueValidator(Decimal("90"))],
+        null=True, 
+        blank=True
     )
     longitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
         validators=[MinValueValidator(Decimal("-180")), MaxValueValidator(Decimal("180"))],
+        null=True, 
+        blank=True
     )
+    
     selfie = models.ImageField(
         upload_to=attendance_selfie_upload_path,
         validators=[validate_selfie_file],
@@ -77,12 +84,13 @@ class Attendance(models.Model):
                 condition=Q(punch_out__isnull=True),
                 name="unique_open_attendance_per_employee",
             ),
+            # 🚨 Updated constraints to accept null values
             models.CheckConstraint(
-                condition=Q(latitude__gte=-90, latitude__lte=90),
+                condition=Q(latitude__isnull=True) | Q(latitude__gte=-90, latitude__lte=90),
                 name="attendance_latitude_range",
             ),
             models.CheckConstraint(
-                condition=Q(longitude__gte=-180, longitude__lte=180),
+                condition=Q(longitude__isnull=True) | Q(longitude__gte=-180, longitude__lte=180),
                 name="attendance_longitude_range",
             ),
         ]
