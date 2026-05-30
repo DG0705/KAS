@@ -9,7 +9,7 @@ from .models import Attendance
 from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer
 
 # 🚨 REPLACE WITH YOUR OFFICE WI-FI IP ADDRESS
-OFFICE_IP = "103.24.56.89" 
+OFFICE_IP = "223.181.60.234" 
 
 def get_client_ip(request):
     """Extracts the real IP address of the mobile phone, even on Render"""

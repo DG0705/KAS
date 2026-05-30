@@ -9,14 +9,14 @@ class AttendanceService {
   final ApiClient _apiClient;
 
   Future<AttendanceRecord> punchIn({
-    // 🚨 GPS variables completely removed!
     required XFile selfie,
     required AttendanceType attendanceType,
   }) async {
     final json = await _apiClient.postMultipart(
       '/attendance/punch-in/',
       fields: {
-        'type': attendanceType.value,
+        // 🚨 Renamed from 'type' to 'attendance_type' to match Django exactly
+        'attendance_type': attendanceType.value,
       },
       fileField: 'selfie',
       filePath: selfie.path,
