@@ -8,10 +8,8 @@ from rest_framework.views import APIView
 from .models import Attendance
 from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer
 
-
-# --- 1. Define Office Wi-Fi IP ---
-# 🚨 REPLACE THIS WITH YOUR ACTUAL OFFICE IP (Search "What is my IP" on office Wi-Fi)
-OFFICE_IP = "223.181.60.234" 
+# 🚨 REPLACE WITH YOUR OFFICE WI-FI IP ADDRESS
+OFFICE_IP = "103.24.56.89" 
 
 def get_client_ip(request):
     """Extracts the real IP address of the mobile phone, even on Render"""
@@ -28,18 +26,21 @@ class PunchInView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        # --- 2. The Wi-Fi Security Gate ---
+        # --- 1. The Wi-Fi Security Gate ---
         user_ip = get_client_ip(request)
-        attendance_type = request.data.get('type')
         
-        # We only enforce the Wi-Fi check if they select "Office"
+        # 🚨 Extracting the exact name sent by Flutter
+        attendance_type = request.data.get('attendance_type')
+        
+        # We only enforce the Wi-Fi check if they select "Office" in the app
         if attendance_type == 'office' and user_ip != OFFICE_IP:
             return Response(
+                # This error message is very helpful - it tells you exactly what IP Render sees!
                 {"detail": f"You must be connected to the Office Wi-Fi to punch in. (Detected IP: {user_ip})" },
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # --- 3. Proceed with normal Punch-In ---
+        # --- 2. Proceed with normal Punch-In ---
         serializer = PunchInSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         attendance = serializer.save()
