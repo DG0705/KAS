@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -7,12 +8,16 @@ from rest_framework.views import APIView
 
 from .models import Attendance
 from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer
+from .services import get_open_attendance
 
-# 🚨 REPLACE WITH YOUR OFFICE WI-FI IP ADDRESS
-OFFICE_IP = "223.181.60.234" 
+# 🚨 REPLACE WITH YOUR EXACT OFFICE WI-FI IP
+OFFICE_IP = "103.24.56.89" 
+
+# 🚨 A secret password so only YOU can trigger the auto-checkout
+CRON_SECRET = "super_secret_midnight_key_2026"
 
 def get_client_ip(request):
-    """Extracts the real IP address of the mobile phone, even on Render"""
+    """Extracts the real IP address of the mobile phone"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -26,21 +31,15 @@ class PunchInView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        # --- 1. The Wi-Fi Security Gate ---
         user_ip = get_client_ip(request)
-        
-        # 🚨 Extracting the exact name sent by Flutter
         attendance_type = request.data.get('attendance_type')
         
-        # We only enforce the Wi-Fi check if they select "Office" in the app
         if attendance_type == 'office' and user_ip != OFFICE_IP:
             return Response(
-                # This error message is very helpful - it tells you exactly what IP Render sees!
                 {"detail": f"You must be connected to the Office Wi-Fi to punch in. (Detected IP: {user_ip})" },
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # --- 2. Proceed with normal Punch-In ---
         serializer = PunchInSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         attendance = serializer.save()
@@ -48,10 +47,7 @@ class PunchInView(APIView):
         return Response(
             {
                 "message": "Punch in successful.",
-                "attendance": AttendanceSerializer(
-                    attendance,
-                    context={"request": request},
-                ).data,
+                "attendance": AttendanceSerializer(attendance, context={"request": request}).data,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -61,6 +57,22 @@ class PunchOutView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
+        # --- PATH 1: Secure the Punch Out ---
+        employee = request.user
+        open_attendance = get_open_attendance(employee)
+
+        if not open_attendance:
+            return Response({"detail": "No active punch-in found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Only enforce Wi-Fi if they originally punched in at the office
+        if open_attendance.attendance_type == 'office':
+            user_ip = get_client_ip(request)
+            if user_ip != OFFICE_IP:
+                return Response(
+                    {"detail": f"You must be connected to the Office Wi-Fi to punch out. (Detected IP: {user_ip})" },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         serializer = PunchOutSerializer(data={}, context={"request": request})
         serializer.is_valid(raise_exception=True)
         attendance = serializer.save()
@@ -69,10 +81,7 @@ class PunchOutView(APIView):
             {
                 "message": "Punch out successful.",
                 "punch_out": attendance.punch_out,
-                "attendance": AttendanceSerializer(
-                    attendance,
-                    context={"request": request},
-                ).data,
+                "attendance": AttendanceSerializer(attendance, context={"request": request}).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -88,3 +97,27 @@ class AttendanceHistoryView(ListAPIView):
             .select_related("employee")
             .order_by("-punch_in")
         )
+
+
+# --- PATH 4: The Midnight Auto-Checkout Webhook ---
+class AutoPunchOutView(APIView):
+    permission_classes = () # No login required, we use the secret key instead
+
+    def get(self, request):
+        secret = request.query_params.get('secret')
+        
+        # Block hackers from triggering this URL
+        if secret != CRON_SECRET:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Find everyone who forgot to punch out (punch_out is empty)
+        open_records = Attendance.objects.filter(punch_out__isnull=True)
+        count = open_records.count()
+
+        # Force punch them out
+        for record in open_records:
+            record.punch_out = timezone.now()
+            record.status = Attendance.Status.COMPLETED
+            record.save()
+
+        return Response({"message": f"Midnight Sweep Complete: Auto-punched out {count} employees."})
