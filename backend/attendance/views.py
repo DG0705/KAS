@@ -14,7 +14,7 @@ from .services import get_open_attendance
 OFFICE_IP = "103.24.56.89" 
 
 # 🚨 A secret password so only YOU can trigger the auto-checkout
-CRON_SECRET = "super_secret_midnight_key_2026"
+CRON_SECRET = "lushvibes0202"
 
 def get_client_ip(request):
     """Extracts the real IP address of the mobile phone"""
