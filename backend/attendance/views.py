@@ -11,7 +11,7 @@ from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerial
 from .services import get_open_attendance
 
 # 🚨 REPLACE WITH YOUR EXACT OFFICE WI-FI IP
-OFFICE_IP = "152.59.108.243" 
+OFFICE_IP = "223.181.59.200" 
 
 # 🚨 A secret password so only YOU can trigger the auto-checkout
 CRON_SECRET = "lushvibes0202"
