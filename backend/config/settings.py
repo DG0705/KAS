@@ -141,7 +141,8 @@ WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_ROOT = str(BASE_DIR / 'frontend')
 WHITENOISE_INDEX_FILE = True
 
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+# Use WhiteNoise to serve files, but use the basic version so it doesn't crash on Jazzmin
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 if os.getenv('CLOUDINARY_URL'):
     STORAGES = {
@@ -149,6 +150,6 @@ if os.getenv('CLOUDINARY_URL'):
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
