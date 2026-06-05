@@ -47,6 +47,27 @@ INSTALLED_APPS = [
     'attendance',
 ]
 
+JAZZMIN_SETTINGS = {
+    "site_title": "KAS HR Admin",
+    "site_header": "KAS Attendance",
+    "site_brand": "HR Dashboard",
+    "welcome_sign": "Welcome to the KAS HR Portal",
+    
+    # Add icons to your sidebar menus (using FontAwesome class names)
+    "icons": {
+        "accounts.Employee": "fas fa-users",
+        "attendance.Attendance": "fas fa-clock",
+        "auth.Group": "fas fa-shield-alt",
+    },
+    
+    # Make the UI slightly more compact for data viewing
+    "ui_tweaks": {
+        "theme": "lumen", # A clean, professional theme
+        "navbar": "navbar-dark",
+        "sidebar": "sidebar-dark-primary",
+    }
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
