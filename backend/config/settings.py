@@ -133,17 +133,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 🚨 Add this line to stop WhiteNoise from crashing over missing fonts
 WHITENOISE_MANIFEST_STRICT = False
 
-# Use WhiteNoise to serve static files (CSS/JS) efficiently
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# Use Django's native static collector to completely bypass WhiteNoise compression crashes
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 if os.getenv('CLOUDINARY_URL'):
     STORAGES = {
         "default": {
-            # Media files (Selfies) go to Cloudinary
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            # Static files go to WhiteNoise
-            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+            # 🚨 Changed to native Django storage
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
