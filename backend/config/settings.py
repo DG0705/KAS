@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
-# 🚨 FIX 1: Force Render's environment to recognize Flutter's JavaScript and JSON files
+# 🚨 Force Render's environment to recognize Flutter's JavaScript and JSON files
 mimetypes.add_type("application/javascript", ".js", True)
 mimetypes.add_type("application/json", ".json", True)
 mimetypes.add_type("application/manifest+json", ".webmanifest", True)
@@ -64,7 +64,8 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'frontend')],
+        # 🚨 FIX 1: Removed 'frontend' from here. Django no longer interferes with Flutter.
+        'DIRS': [], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -107,18 +108,6 @@ TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Asia/Kolkata")
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'frontend'),
-]
-
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
@@ -135,22 +124,31 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-WHITENOISE_MANIFEST_STRICT = False
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
-# 🚨 FIX 2: Explicitly cast Path to String and enable index routing for the root directory
+# --- 🚨 THE PERMANENT STATIC FILES CONFIGURATION ---
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'frontend'),
+]
+
+# Tell WhiteNoise to serve the Flutter folder natively at the root URL
 WHITENOISE_ROOT = str(BASE_DIR / 'frontend')
 WHITENOISE_INDEX_FILE = True
+WHITENOISE_MANIFEST_STRICT = False
 
-# 🚨 Use Django's native collector to completely bypass WhiteNoise compression crashes on Flutter fonts
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-
-if os.getenv('CLOUDINARY_URL'):
-    STORAGES = {
-        "default": {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-        },
-        "staticfiles": {
-            # 🚨 Changed back to native Django storage
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-        },
-    }
+# The modern Storage Engine (Zero compression crashes, keeps Cloudinary for media)
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
