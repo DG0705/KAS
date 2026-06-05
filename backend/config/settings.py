@@ -134,7 +134,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WHITENOISE_MANIFEST_STRICT = False
 
 # Use WhiteNoise to serve static files (CSS/JS) efficiently
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 if os.getenv('CLOUDINARY_URL'):
     STORAGES = {
@@ -144,6 +144,6 @@ if os.getenv('CLOUDINARY_URL'):
         },
         "staticfiles": {
             # Static files go to WhiteNoise
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
