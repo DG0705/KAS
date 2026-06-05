@@ -43,7 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # 🚨 WhiteNoise has been completely removed
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,15 +130,17 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🚨 THE NEW METHOD: Use Cloudinary for both Media (Selfies) AND Static Files (CSS)
-STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticCloudinaryStorage'
+# Use WhiteNoise to serve static files (CSS/JS) efficiently
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 if os.getenv('CLOUDINARY_URL'):
     STORAGES = {
         "default": {
+            # Media files (Selfies) go to Cloudinary
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            "BACKEND": "cloudinary_storage.storage.StaticCloudinaryStorage",
+            # Static files go to WhiteNoise
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
