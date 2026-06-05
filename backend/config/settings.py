@@ -143,6 +143,9 @@ WHITENOISE_ROOT = str(BASE_DIR / 'frontend')
 WHITENOISE_INDEX_FILE = True
 WHITENOISE_MANIFEST_STRICT = False
 
+# 🚨 ADD THIS LINE BACK: Cloudinary's older code strictly requires this variable to exist
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
 # The modern Storage Engine (Zero compression crashes, keeps Cloudinary for media)
 STORAGES = {
     "default": {
