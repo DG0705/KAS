@@ -1,8 +1,14 @@
 import os
+import mimetypes
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
+
+# 🚨 FIX 1: Force Render's environment to recognize Flutter's JavaScript and JSON files
+mimetypes.add_type("application/javascript", ".js", True)
+mimetypes.add_type("application/json", ".json", True)
+mimetypes.add_type("application/manifest+json", ".webmanifest", True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -73,7 +79,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# 🚨 UPDATED DATABASE SECTION: Connects to Supabase if URL is present, otherwise uses local SQLite
 if os.getenv("DATABASE_URL"):
     DATABASES = {
         'default': dj_database_url.config(
@@ -130,10 +135,12 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🚨 Add this line to stop WhiteNoise from crashing over missing fonts
 WHITENOISE_MANIFEST_STRICT = False
 
-# Use Django's native static collector to completely bypass WhiteNoise compression crashes
+# 🚨 FIX 2: Explicitly cast Path to String and enable index routing for the root directory
+WHITENOISE_ROOT = str(BASE_DIR / 'frontend')
+WHITENOISE_INDEX_FILE = True
+
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 if os.getenv('CLOUDINARY_URL'):
@@ -142,7 +149,6 @@ if os.getenv('CLOUDINARY_URL'):
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            # 🚨 Changed to native Django storage
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
