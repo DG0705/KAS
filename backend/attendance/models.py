@@ -106,3 +106,12 @@ class Attendance(models.Model):
     def __str__(self) -> str:
         punch_date = timezone.localtime(self.punch_in).strftime("%Y-%m-%d %H:%M")
         return f"{self.employee} - {self.attendance_type} - {punch_date}"
+    
+    # 🚨 NEW: Automatically calculates hours worked for the HR Dashboard
+    @property
+    def total_hours(self):
+        if self.punch_in and self.punch_out:
+            time_diff = self.punch_out - self.punch_in
+            hours = time_diff.total_seconds() / 3600
+            return round(hours, 2)
+        return "Active Shift"

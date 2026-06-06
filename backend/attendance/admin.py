@@ -1,46 +1,50 @@
 import csv
 from django.http import HttpResponse
 from django.contrib import admin
-from .models import Attendance # Change this if your model is named differently
+from django.utils import timezone
+from .models import Attendance
 
 @admin.action(description="Export Selected Records to CSV (Excel)")
 def export_to_csv(modeladmin, request, queryset):
-    # 1. Create the HttpResponse object with CSV headers
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="attendance_export.csv"'
     
     writer = csv.writer(response)
+    # Updated headers to match your actual model
+    writer.writerow(['Employee', 'Date', 'Punch In Time', 'Punch Out Time', 'Total Hours', 'Type', 'Status'])
     
-    # 2. Write the header row
-    writer.writerow(['Employee Name', 'Date', 'Punch In Time', 'Punch Out Time', 'IP Address'])
-    
-    # 3. Write the data rows
     for record in queryset:
-        # We use .strftime to format the timestamps nicely, handling empty punch-outs
-        punch_in = record.punch_in.strftime("%I:%M %p") if record.punch_in else "N/A"
-        punch_out = record.punch_out.strftime("%I:%M %p") if record.punch_out else "Still active"
+        # Safely convert to local time zone for the export
+        local_punch_in = timezone.localtime(record.punch_in)
+        punch_in_str = local_punch_in.strftime("%I:%M %p")
         
+        punch_out_str = "Still active"
+        if record.punch_out:
+            local_punch_out = timezone.localtime(record.punch_out)
+            punch_out_str = local_punch_out.strftime("%I:%M %p")
+            
         writer.writerow([
-            record.employee.email, # Or record.employee.first_name if you have it
-            record.date,
-            punch_in,
-            punch_out,
-            record.ip_address
+            record.employee.email, 
+            local_punch_in.strftime("%Y-%m-%d"), # Extracts the date from punch_in
+            punch_in_str,
+            punch_out_str,
+            record.total_hours,
+            record.get_attendance_type_display(),
+            record.get_status_display()
         ])
         
     return response
 
-# Register the Admin Class
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
-    # What columns show up on the dashboard
-    list_display = ('employee', 'date', 'punch_in', 'punch_out', 'ip_address')
+    # Matches your exact models.py fields
+    list_display = ('employee', 'punch_in', 'punch_out', 'total_hours', 'attendance_type', 'status')
     
-    # Adds a filter sidebar on the right side
-    list_filter = ('date', 'employee')
+    # We use punch_in for the date filter since there is no separate 'date' field
+    list_filter = ('punch_in', 'attendance_type', 'status', 'employee')
     
-    # Adds a search bar at the top
-    search_fields = ('employee__email', 'ip_address')
+    # Allows HR to search by employee email
+    search_fields = ('employee__email',)
     
-    # Attach our custom export button
+    readonly_fields = ('created_at', 'updated_at')
     actions = [export_to_csv]
