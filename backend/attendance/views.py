@@ -6,15 +6,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Attendance
-from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer
+from .models import Attendance, SiteVisit # 🚨 Added SiteVisit
+from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer, SiteVisitSerializer
 from .services import get_open_attendance
 
-# 🚨 REPLACE WITH YOUR EXACT OFFICE WI-FI IP
-OFFICE_IP = "223.181.57.171" 
-
-# 🚨 A secret password so only YOU can trigger the auto-checkout
+# A secret password so only YOU can trigger the auto-checkout
 CRON_SECRET = "lushvibes0202"
+OFFICE_IP = "223.181.57.171" 
 
 def get_client_ip(request):
     """Extracts the real IP address of the mobile phone"""
@@ -57,14 +55,12 @@ class PunchOutView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        # --- PATH 1: Secure the Punch Out ---
         employee = request.user
         open_attendance = get_open_attendance(employee)
 
         if not open_attendance:
             return Response({"detail": "No active punch-in found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Only enforce Wi-Fi if they originally punched in at the office
         if open_attendance.attendance_type == 'office':
             user_ip = get_client_ip(request)
             if user_ip != OFFICE_IP:
@@ -98,26 +94,111 @@ class AttendanceHistoryView(ListAPIView):
             .order_by("-punch_in")
         )
 
+# --- 🚨 NEW: Field Force Management (FFM) Endpoints ---
 
-# --- PATH 4: The Midnight Auto-Checkout Webhook ---
+class SiteVisitCheckInView(APIView):
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser) # Needed for selfie upload
+
+    def post(self, request):
+        employee = request.user
+        open_attendance = get_open_attendance(employee)
+
+        # 1. SMART AUTO-PUNCH: If no open shift, create one using the selfie
+        if not open_attendance:
+            selfie = request.data.get('selfie')
+            if not selfie:
+                return Response(
+                    {"detail": "A selfie is required for your first check-in of the day to start your shift."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            punch_in_serializer = PunchInSerializer(
+                data={'attendance_type': 'site', 'selfie': selfie},
+                context={'request': request}
+            )
+            punch_in_serializer.is_valid(raise_exception=True)
+            open_attendance = punch_in_serializer.save()
+
+        # 2. Block concurrent meetings
+        active_meeting = SiteVisit.objects.filter(employee=employee, status=SiteVisit.VisitStatus.IN_PROGRESS).first()
+        if active_meeting:
+            return Response(
+                {"detail": f"You are already in a meeting with {active_meeting.client_name}. Please check out first."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Create the specific Client Visit
+        client_name = request.data.get('client_name')
+        lat = request.data.get('check_in_latitude')
+        lon = request.data.get('check_in_longitude')
+
+        if not client_name:
+            return Response({"detail": "Client name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        visit = SiteVisit.objects.create(
+            employee=employee,
+            attendance=open_attendance,
+            client_name=client_name,
+            check_in_latitude=lat,
+            check_in_longitude=lon
+        )
+
+        return Response({
+            "message": "Checked into client site successfully.",
+            "visit": SiteVisitSerializer(visit).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class SiteVisitCheckOutView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        employee = request.user
+        active_meeting = SiteVisit.objects.filter(employee=employee, status=SiteVisit.VisitStatus.IN_PROGRESS).first()
+
+        if not active_meeting:
+            return Response({"detail": "No active client meeting found to check out of."}, status=status.HTTP_400_BAD_REQUEST)
+
+        notes = request.data.get('meeting_notes', '')
+        
+        # Close the meeting
+        active_meeting.departed_at = timezone.now()
+        active_meeting.status = SiteVisit.VisitStatus.COMPLETED
+        active_meeting.meeting_notes = notes
+        active_meeting.save()
+
+        return Response({
+            "message": "Checked out of client site successfully.",
+            "visit": SiteVisitSerializer(active_meeting).data
+        }, status=status.HTTP_200_OK)
+
+
 class AutoPunchOutView(APIView):
-    permission_classes = () # No login required, we use the secret key instead
+    permission_classes = () 
 
     def get(self, request):
         secret = request.query_params.get('secret')
         
-        # Block hackers from triggering this URL
         if secret != CRON_SECRET:
             return Response({"detail": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Find everyone who forgot to punch out (punch_out is empty)
         open_records = Attendance.objects.filter(punch_out__isnull=True)
         count = open_records.count()
 
-        # Force punch them out
         for record in open_records:
             record.punch_out = timezone.now()
             record.status = Attendance.Status.COMPLETED
             record.save()
+            
+            # 🚨 Auto-close any lingering client meetings as well
+            SiteVisit.objects.filter(
+                attendance=record, 
+                status=SiteVisit.VisitStatus.IN_PROGRESS
+            ).update(
+                departed_at=timezone.now(), 
+                status=SiteVisit.VisitStatus.COMPLETED, 
+                meeting_notes="Auto-closed by midnight sweep."
+            )
 
         return Response({"message": f"Midnight Sweep Complete: Auto-punched out {count} employees."})

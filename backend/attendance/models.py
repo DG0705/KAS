@@ -115,3 +115,46 @@ class Attendance(models.Model):
             hours = time_diff.total_seconds() / 3600
             return round(hours, 2)
         return "Active Shift"
+
+
+
+
+
+class SiteVisit(models.Model):
+    class VisitStatus(models.TextChoices):
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED = "completed", "Completed"
+
+    # Link to the employee and their specific daily attendance record
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="site_visits")
+    attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name="client_meetings", null=True, blank=True)
+    
+    # Meeting Details
+    client_name = models.CharField(max_length=255)
+    meeting_notes = models.TextField(blank=True, null=True, help_text="Salesperson notes after meeting")
+    
+    # Timestamps
+    arrived_at = models.DateTimeField(default=timezone.now)
+    departed_at = models.DateTimeField(blank=True, null=True)
+    
+    # Geolocation for Check-in
+    check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_in_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=VisitStatus.choices, default=VisitStatus.IN_PROGRESS)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-arrived_at']
+
+    def __str__(self):
+        return f"{self.client_name} Visit - {self.employee.email}"
+
+    @property
+    def meeting_duration(self):
+        """Calculates how long the salesperson was actually inside the client meeting"""
+        if self.arrived_at and self.departed_at:
+            duration = self.departed_at - self.arrived_at
+            minutes = int(duration.total_seconds() / 60)
+            return f"{minutes} mins"
+        return "Ongoing"

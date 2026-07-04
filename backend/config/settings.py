@@ -60,6 +60,7 @@ JAZZMIN_SETTINGS = {
     "icons": {
         "accounts.Employee": "fas fa-users",
         "attendance.Attendance": "fas fa-clock",
+        "attendance.SiteVisit": "fas fa-handshake",
         "auth.Group": "fas fa-shield-alt",
     },
     
