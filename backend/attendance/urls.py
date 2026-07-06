@@ -4,8 +4,8 @@ from .views import (
     PunchOutView, 
     AttendanceHistoryView, 
     AutoPunchOutView,
-    SiteVisitCheckInView,  # 🚨 New import
-    SiteVisitCheckOutView  # 🚨 New import
+    SiteVisitCheckInView,
+    SiteVisitCheckOutView  
 )
 
 urlpatterns = [
