@@ -114,8 +114,12 @@ class SiteVisitCheckInView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # 🚨 FIX: Copy the incoming request.data to preserve DRF's file handling
+            data = request.data.copy() if hasattr(request.data, 'copy') else request.data
+            data['attendance_type'] = 'site' # Inject the missing required field
+
             punch_in_serializer = PunchInSerializer(
-                data={'attendance_type': 'site', 'selfie': selfie},
+                data=data,
                 context={'request': request}
             )
             punch_in_serializer.is_valid(raise_exception=True)
@@ -149,7 +153,6 @@ class SiteVisitCheckInView(APIView):
             "message": "Checked into client site successfully.",
             "visit": SiteVisitSerializer(visit).data
         }, status=status.HTTP_201_CREATED)
-
 
 class SiteVisitCheckOutView(APIView):
     permission_classes = (IsAuthenticated,)

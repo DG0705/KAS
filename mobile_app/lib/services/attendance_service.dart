@@ -18,7 +18,7 @@ class AttendanceService {
         'attendance_type': attendanceType.value,
       },
       fileField: 'selfie',
-      filePath: selfie.path,
+      file: selfie,
     );
 
     return AttendanceRecord.fromJson(json['attendance'] as Map<String, dynamic>);
@@ -53,7 +53,7 @@ class AttendanceService {
           'check_in_longitude': lon.toString(),
         },
         fileField: 'selfie',
-        filePath: selfie.path,
+        file: selfie,
       );
       return json;
     } else {

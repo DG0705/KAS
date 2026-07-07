@@ -1,7 +1,6 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
+import 'package:image_picker/image_picker.dart';
 import '../utils/api_exception.dart';
 
 typedef TokenProvider = String? Function();
@@ -60,7 +59,7 @@ class ApiClient {
     String path, {
     required Map<String, String> fields,
     required String fileField,
-    required String filePath,
+    required XFile file,
   }) async {
     final request = http.MultipartRequest('POST', _uri(path));
     final token = tokenProvider?.call();
@@ -68,7 +67,14 @@ class ApiClient {
       request.headers['Authorization'] = 'Bearer $token';
     }
     request.fields.addAll(fields);
-    request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+    
+    // 🚨 WEB-SAFE FILE UPLOAD: Read as bytes instead of using the path
+    final bytes = await file.readAsBytes();
+    request.files.add(http.MultipartFile.fromBytes(
+      fileField, 
+      bytes,
+      filename: file.name,
+    ));
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
