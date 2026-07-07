@@ -202,26 +202,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.history),
                   label: const Text('View Attendance History'),
                 ),
-                const SizedBox(height: 12),
                 
-                // 🚨 NEW: Client Site Visit Button
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SiteVisitScreen(
-                          attendanceService: widget.attendanceService,
+                // 🚨 NEW: Client Site Visit Button - Visible only to Sales/Admin
+                if (employee != null && (employee.isSalesperson || employee.isAdmin)) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SiteVisitScreen(
+                            attendanceService: widget.attendanceService,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.handshake_outlined),
-                  label: const Text('Log Client Meeting'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1F6F5B), 
-                    side: const BorderSide(color: Color(0xFF1F6F5B)),
+                      );
+                    },
+                    icon: const Icon(Icons.handshake_outlined),
+                    label: const Text('Log Client Meeting'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1F6F5B),
+                      side: const BorderSide(color: Color(0xFF1F6F5B)),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           );

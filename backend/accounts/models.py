@@ -8,6 +8,7 @@ class Employee(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         ADMIN = "admin", "Admin"
         EMPLOYEE = "employee", "Employee"
+        SALESPERSON = "salesperson", "Salesperson"
 
     name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
@@ -39,3 +40,7 @@ class Employee(AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin(self) -> bool:
         return self.role == self.Role.ADMIN
+    
+    @property
+    def is_salesperson(self) -> bool: 
+        return self.role == self.Role.SALESPERSON

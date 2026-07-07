@@ -16,6 +16,7 @@ class Employee {
   final DateTime? createdAt;
 
   bool get isAdmin => role == 'admin';
+  bool get isSalesperson => role == 'salesperson';
 
   factory Employee.fromJson(Map<String, dynamic> json) {
     return Employee(
