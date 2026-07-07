@@ -1,3 +1,4 @@
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import ListAPIView
@@ -98,7 +99,7 @@ class AttendanceHistoryView(ListAPIView):
 
 class SiteVisitCheckInView(APIView):
     permission_classes = (IsAuthenticated,)
-    parser_classes = (MultiPartParser, FormParser) # Needed for selfie upload
+    parser_classes = (MultiPartParser, FormParser, JSONParser) # Needed for selfie upload
 
     def post(self, request):
         employee = request.user

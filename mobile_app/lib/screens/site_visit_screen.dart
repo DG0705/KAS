@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -44,7 +45,8 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
     return await Geolocator.getCurrentPosition();
   }
 
-  Future<void> _checkIn() async {
+  // 🚨 Updated to accept an optional selfie
+  Future<void> _checkIn({XFile? selfie}) async {
     if (_clientNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the client name')),
@@ -61,6 +63,7 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
         clientName: _clientNameController.text.trim(), 
         lat: position.latitude, 
         lon: position.longitude,
+        selfie: selfie, // 🚨 Pass the selfie if it was provided
       );
 
       if (!mounted) return;
@@ -75,6 +78,13 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
       );
     } on ApiException catch (e) {
       setState(() => _isLoading = false);
+      
+      // 🚨 Catch the specific auto-punch error and open the camera
+      if (e.message.toLowerCase().contains('selfie is required')) {
+        _promptForSelfie();
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('API Error: ${e.message}')),
       );
@@ -83,6 +93,27 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
+    }
+  }
+
+  // 🚨 New function to handle taking the selfie and retrying
+  Future<void> _promptForSelfie() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Starting your shift! Please take a selfie first.'), 
+        duration: Duration(seconds: 3)
+      ),
+    );
+    
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+    );
+
+    if (image != null) {
+      // Retry the check-in, this time passing the selfie!
+      _checkIn(selfie: image); 
     }
   }
 
@@ -134,7 +165,7 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
         padding: const EdgeInsets.all(24.0),
         child: _isLoading 
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView( // Added to prevent keyboard overflow
+          : SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,7 +184,7 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      onPressed: _checkIn,
+                      onPressed: () => _checkIn(), // 🚨 Wrap in anonymous function since signature changed
                       icon: const Icon(Icons.location_on),
                       label: const Text('Check In to Meeting'),
                       style: ElevatedButton.styleFrom(

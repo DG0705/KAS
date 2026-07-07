@@ -41,16 +41,33 @@ class AttendanceService {
     required String clientName,
     required double lat,
     required double lon,
+    XFile? selfie, // 🚨 Added optional selfie
   }) async {
-    final json = await _apiClient.postJson(
-      '/attendance/site-checkin/',
-      {
-        'client_name': clientName,
-        'check_in_latitude': lat,
-        'check_in_longitude': lon,
-      },
-    );
-    return json as Map<String, dynamic>;
+    if (selfie != null) {
+      // 🚨 Send as Multipart if we have a selfie (First meeting of the day)
+      final json = await _apiClient.postMultipart(
+        '/attendance/site-checkin/',
+        fields: {
+          'client_name': clientName,
+          'check_in_latitude': lat.toString(),
+          'check_in_longitude': lon.toString(),
+        },
+        fileField: 'selfie',
+        filePath: selfie.path,
+      );
+      return json;
+    } else {
+      // Send as JSON if no selfie is needed (Already punched in)
+      final json = await _apiClient.postJson(
+        '/attendance/site-checkin/',
+        {
+          'client_name': clientName,
+          'check_in_latitude': lat,
+          'check_in_longitude': lon,
+        },
+      );
+      return json as Map<String, dynamic>;
+    }
   }
 
   Future<Map<String, dynamic>> checkOutOfClient(String notes) async {
