@@ -15,7 +15,6 @@ class AttendanceService {
     final json = await _apiClient.postMultipart(
       '/attendance/punch-in/',
       fields: {
-        // 🚨 Renamed from 'type' to 'attendance_type' to match Django exactly
         'attendance_type': attendanceType.value,
       },
       fileField: 'selfie',
@@ -35,5 +34,30 @@ class AttendanceService {
     return list
         .map((item) => AttendanceRecord.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  // --- 🚨 NEW: Field Force Management API Calls ---
+  Future<Map<String, dynamic>> checkInToClient({
+    required String clientName,
+    required double lat,
+    required double lon,
+  }) async {
+    final json = await _apiClient.postJson(
+      '/attendance/site-checkin/',
+      {
+        'client_name': clientName,
+        'check_in_latitude': lat,
+        'check_in_longitude': lon,
+      },
+    );
+    return json as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> checkOutOfClient(String notes) async {
+    final json = await _apiClient.postJson(
+      '/attendance/site-checkout/',
+      {'meeting_notes': notes},
+    );
+    return json as Map<String, dynamic>;
   }
 }

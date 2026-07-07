@@ -11,6 +11,7 @@ import '../widgets/primary_button.dart';
 import 'attendance_history_screen.dart';
 import 'login_screen.dart';
 import 'punch_in_screen.dart';
+import 'site_visit_screen.dart'; // 🚨 Imported the new screen
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -200,6 +201,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                   icon: const Icon(Icons.history),
                   label: const Text('View Attendance History'),
+                ),
+                const SizedBox(height: 12),
+                
+                // 🚨 NEW: Client Site Visit Button
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SiteVisitScreen(
+                          attendanceService: widget.attendanceService,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.handshake_outlined),
+                  label: const Text('Log Client Meeting'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1F6F5B), 
+                    side: const BorderSide(color: Color(0xFF1F6F5B)),
+                  ),
                 ),
               ],
             ),
