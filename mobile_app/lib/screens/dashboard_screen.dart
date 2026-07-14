@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../models/attendance_record.dart';
 import '../services/attendance_service.dart';
 import '../services/auth_service.dart';

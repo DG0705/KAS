@@ -1,8 +1,8 @@
 import 'dart:io';
-
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../models/attendance_record.dart';
 import '../services/attendance_service.dart';
 import '../services/camera_service.dart';

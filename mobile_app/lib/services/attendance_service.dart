@@ -1,5 +1,4 @@
 import 'package:image_picker/image_picker.dart';
-
 import '../models/attendance_record.dart';
 import 'api_client.dart';
 

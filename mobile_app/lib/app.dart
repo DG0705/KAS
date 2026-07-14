@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'screens/splash_screen.dart';
 import 'services/attendance_service.dart';
 import 'services/auth_service.dart';
