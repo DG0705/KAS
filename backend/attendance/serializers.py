@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Attendance, SiteVisit
+from .models import Attendance, SiteVisit 
 from .services import get_open_attendance, punch_in_employee, punch_out_employee
 
 
@@ -40,7 +40,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class PunchInSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
-        # 🚨 Added latitude and longitude, removed selfie
+        # 🚨 Replaced selfie with latitude/longitude
         fields = ("attendance_type", "latitude", "longitude")
         extra_kwargs = {
             "attendance_type": {"required": True},
@@ -53,7 +53,7 @@ class PunchInSerializer(serializers.ModelSerializer):
                 {"detail": "You are already punched in. Please punch out first."}
             )
 
-        # 🚨 Require coordinates for Site punch-ins
+        # 🚨 Enforce location for site punch-ins
         if attrs.get('attendance_type') == 'site':
             if not attrs.get('latitude') or not attrs.get('longitude'):
                 raise serializers.ValidationError(

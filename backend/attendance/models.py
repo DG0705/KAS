@@ -7,8 +7,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+# Removed validate_selfie_file import as it's no longer strictly enforced
 
-# You can keep this function in case you ever want to re-enable selfies later
 def attendance_selfie_upload_path(instance, filename: str) -> str:
     extension = os.path.splitext(filename)[1].lower()
     date_path = timezone.localdate().strftime("%Y/%m/%d")
@@ -49,7 +49,7 @@ class Attendance(models.Model):
         blank=True
     )
     
-    # 🚨 Selfie made completely optional, validators removed to prevent blockages
+    # 🚨 Selfie is now optional
     selfie = models.ImageField(
         upload_to=attendance_selfie_upload_path,
         null=True,
