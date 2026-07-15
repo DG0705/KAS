@@ -52,10 +52,10 @@ class _PunchInScreenState extends State<PunchInScreen> {
   Future<void> _submit() async {
     setState(() => _error = null);
 
-    if (_selfie == null) {
-      setState(() => _error = 'Selfie photo is required before punch in.');
-      return;
-    }
+    // if (_selfie == null) {
+    //   setState(() => _error = 'Selfie photo is required before punch in.');
+    //   return;
+    // }
 
     setState(() => _isSubmitting = true);
 
