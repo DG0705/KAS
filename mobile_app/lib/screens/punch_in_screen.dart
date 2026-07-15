@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart'; // 🚨 Added for location logging
+import 'package:geolocator/geolocator.dart'; 
 import '../models/attendance_record.dart';
 import '../services/attendance_service.dart';
 import '../utils/api_exception.dart';
@@ -23,7 +23,7 @@ class _PunchInScreenState extends State<PunchInScreen> {
   bool _isSubmitting = false;
   String? _error;
 
-  /// Helper to request location permissions and fetch current GPS coordinates
+  // Handles requesting GPS permissions and fetching the location
   Future<Position?> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -52,14 +52,16 @@ class _PunchInScreenState extends State<PunchInScreen> {
   }
 
   Future<void> _submit() async {
-    setState(() => _error = null);
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _error = null;
+      _isSubmitting = true;
+    });
 
     double? lat;
     double? lon;
 
     try {
-      // 🚨 Fetch coordinates ONLY if the user is punching into a Site
+      // Fetch coordinates ONLY if the user is punching into a Site
       if (_attendanceType == AttendanceType.site) {
         final position = await _getCurrentLocation();
         if (position == null) {
@@ -70,7 +72,7 @@ class _PunchInScreenState extends State<PunchInScreen> {
         lon = position.longitude;
       }
 
-      // 🚨 Fire the clean JSON request matching our new attendance service
+      // Call the API with coordinates instead of a selfie
       await widget.attendanceService.punchIn(
         attendanceType: _attendanceType,
         lat: lat,
@@ -129,9 +131,10 @@ class _PunchInScreenState extends State<PunchInScreen> {
           ),
           const SizedBox(height: 30),
           
-          // 🚨 Helpful contextual helper text for the employee
+          // Information card replacing the old selfie UI
           Card(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            elevation: 0,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -141,13 +144,14 @@ class _PunchInScreenState extends State<PunchInScreen> {
                         ? Icons.wifi_find_outlined 
                         : Icons.location_on_outlined,
                     color: Theme.of(context).primaryColor,
+                    size: 32,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       _attendanceType == AttendanceType.office
-                          ? 'Office punch-in validates your session directly against the secure office router IP network.'
-                          : 'Site punch-in will capture your precise GPS coordinates alongside the shift entry.',
+                          ? 'Office punch-in validates your session directly against the secure office network.'
+                          : 'Site punch-in will securely capture your precise GPS coordinates.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -155,6 +159,7 @@ class _PunchInScreenState extends State<PunchInScreen> {
               ),
             ),
           ),
+          
           const SizedBox(height: 40),
           PrimaryButton(
             label: 'Submit Punch In',
