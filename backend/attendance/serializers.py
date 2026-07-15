@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Attendance, SiteVisit # 🚨 Added SiteVisit to imports
+from .models import Attendance, SiteVisit
 from .services import get_open_attendance, punch_in_employee, punch_out_employee
 
 
@@ -40,9 +40,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class PunchInSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
-        fields = ("selfie", "attendance_type")
+        # 🚨 Added latitude and longitude, removed selfie
+        fields = ("attendance_type", "latitude", "longitude")
         extra_kwargs = {
-            "selfie": {"required": True},
             "attendance_type": {"required": True},
         }
 
@@ -52,6 +52,13 @@ class PunchInSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"detail": "You are already punched in. Please punch out first."}
             )
+
+        # 🚨 Require coordinates for Site punch-ins
+        if attrs.get('attendance_type') == 'site':
+            if not attrs.get('latitude') or not attrs.get('longitude'):
+                raise serializers.ValidationError(
+                    {"detail": "Latitude and longitude are required for Site punch-ins."}
+                )
 
         return attrs
 
@@ -91,7 +98,6 @@ class PunchOutSerializer(serializers.Serializer):
         return attendance
 
 
-# --- 🚨 NEW: FFM Serializer ---
 class SiteVisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = SiteVisit
@@ -102,6 +108,8 @@ class SiteVisitSerializer(serializers.ModelSerializer):
             "departed_at", 
             "meeting_duration", 
             "status", 
-            "meeting_notes"
+            "meeting_notes",
+            "check_in_latitude",
+            "check_in_longitude"
         )
         read_only_fields = fields

@@ -2,16 +2,14 @@ from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import ListAPIView
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Attendance, SiteVisit # 🚨 Added SiteVisit
+from .models import Attendance, SiteVisit
 from .serializers import AttendanceSerializer, PunchInSerializer, PunchOutSerializer, SiteVisitSerializer
 from .services import get_open_attendance
 
-# A secret password so only YOU can trigger the auto-checkout
 CRON_SECRET = "lushvibes0202"
 OFFICE_IP = "223.181.57.171" 
 
@@ -27,12 +25,14 @@ def get_client_ip(request):
 
 class PunchInView(APIView):
     permission_classes = (IsAuthenticated,)
-    parser_classes = (MultiPartParser, FormParser)
+    # 🚨 Added JSONParser so normal requests are processed smoothly
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request):
         user_ip = get_client_ip(request)
         attendance_type = request.data.get('attendance_type')
         
+        # Office Wi-Fi verification
         if attendance_type == 'office' and user_ip != OFFICE_IP:
             return Response(
                 {"detail": f"You must be connected to the Office Wi-Fi to punch in. (Detected IP: {user_ip})" },
@@ -62,6 +62,7 @@ class PunchOutView(APIView):
         if not open_attendance:
             return Response({"detail": "No active punch-in found."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Enforce Office IP check on punch-out as well
         if open_attendance.attendance_type == 'office':
             user_ip = get_client_ip(request)
             if user_ip != OFFICE_IP:
@@ -95,28 +96,25 @@ class AttendanceHistoryView(ListAPIView):
             .order_by("-punch_in")
         )
 
-# --- 🚨 NEW: Field Force Management (FFM) Endpoints ---
 
 class SiteVisitCheckInView(APIView):
     permission_classes = (IsAuthenticated,)
-    parser_classes = (MultiPartParser, FormParser, JSONParser) # Needed for selfie upload
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request):
         employee = request.user
         open_attendance = get_open_attendance(employee)
 
-        # 1. SMART AUTO-PUNCH: If no open shift, create one using the selfie
+        # 1. SMART AUTO-PUNCH: If no open shift, create one automatically
         if not open_attendance:
-            selfie = request.data.get('selfie')
-            if not selfie:
-                return Response(
-                    {"detail": "A selfie is required for your first check-in of the day to start your shift."}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # 🚨 FIX: Copy the incoming request.data to preserve DRF's file handling
             data = request.data.copy() if hasattr(request.data, 'copy') else request.data
-            data['attendance_type'] = 'site' # Inject the missing required field
+            data['attendance_type'] = 'site'
+            
+            # 🚨 Map FFM coordinates to the core Attendance punch-in
+            if data.get('check_in_latitude'):
+                data['latitude'] = data.get('check_in_latitude')
+            if data.get('check_in_longitude'):
+                data['longitude'] = data.get('check_in_longitude')
 
             punch_in_serializer = PunchInSerializer(
                 data=data,
@@ -154,8 +152,10 @@ class SiteVisitCheckInView(APIView):
             "visit": SiteVisitSerializer(visit).data
         }, status=status.HTTP_201_CREATED)
 
+
 class SiteVisitCheckOutView(APIView):
     permission_classes = (IsAuthenticated,)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request):
         employee = request.user
@@ -195,7 +195,6 @@ class AutoPunchOutView(APIView):
             record.status = Attendance.Status.COMPLETED
             record.save()
             
-            # 🚨 Auto-close any lingering client meetings as well
             SiteVisit.objects.filter(
                 attendance=record, 
                 status=SiteVisit.VisitStatus.IN_PROGRESS

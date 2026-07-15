@@ -1,7 +1,6 @@
 import os
 import uuid
 from decimal import Decimal
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -9,16 +8,13 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from .validators import validate_selfie_file
-
-
+# You can keep this function in case you ever want to re-enable selfies later
 def attendance_selfie_upload_path(instance, filename: str) -> str:
     extension = os.path.splitext(filename)[1].lower()
     date_path = timezone.localdate().strftime("%Y/%m/%d")
     employee_id = instance.employee_id or "unassigned"
     unique_suffix = uuid.uuid4().hex[:12]
     return f"selfies/{date_path}/employee_{employee_id}_{unique_suffix}{extension}"
-
 
 class Attendance(models.Model):
     class AttendanceType(models.TextChoices):
@@ -38,7 +34,6 @@ class Attendance(models.Model):
     punch_in = models.DateTimeField(default=timezone.now)
     punch_out = models.DateTimeField(null=True, blank=True)
     
-    # 🚨 Updated to allow blank/null values since we use Wi-Fi IP now
     latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,
@@ -54,10 +49,13 @@ class Attendance(models.Model):
         blank=True
     )
     
+    # 🚨 Selfie made completely optional, validators removed to prevent blockages
     selfie = models.ImageField(
         upload_to=attendance_selfie_upload_path,
-        validators=[validate_selfie_file],
+        null=True,
+        blank=True
     )
+    
     attendance_type = models.CharField(
         max_length=10,
         choices=AttendanceType.choices,
@@ -84,7 +82,6 @@ class Attendance(models.Model):
                 condition=Q(punch_out__isnull=True),
                 name="unique_open_attendance_per_employee",
             ),
-            # 🚨 Updated constraints to accept null values
             models.CheckConstraint(
                 condition=Q(latitude__isnull=True) | Q(latitude__gte=-90, latitude__lte=90),
                 name="attendance_latitude_range",
@@ -107,7 +104,6 @@ class Attendance(models.Model):
         punch_date = timezone.localtime(self.punch_in).strftime("%Y-%m-%d %H:%M")
         return f"{self.employee} - {self.attendance_type} - {punch_date}"
     
-    # 🚨 NEW: Automatically calculates hours worked for the HR Dashboard
     @property
     def total_hours(self):
         if self.punch_in and self.punch_out:
@@ -117,27 +113,20 @@ class Attendance(models.Model):
         return "Active Shift"
 
 
-
-
-
 class SiteVisit(models.Model):
     class VisitStatus(models.TextChoices):
         IN_PROGRESS = "in_progress", "In Progress"
         COMPLETED = "completed", "Completed"
 
-    # Link to the employee and their specific daily attendance record
     employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="site_visits")
     attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name="client_meetings", null=True, blank=True)
     
-    # Meeting Details
     client_name = models.CharField(max_length=255)
     meeting_notes = models.TextField(blank=True, null=True, help_text="Salesperson notes after meeting")
     
-    # Timestamps
     arrived_at = models.DateTimeField(default=timezone.now)
     departed_at = models.DateTimeField(blank=True, null=True)
     
-    # Geolocation for Check-in
     check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     check_in_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     
@@ -152,7 +141,6 @@ class SiteVisit(models.Model):
 
     @property
     def meeting_duration(self):
-        """Calculates how long the salesperson was actually inside the client meeting"""
         if self.arrived_at and self.departed_at:
             duration = self.departed_at - self.arrived_at
             minutes = int(duration.total_seconds() / 60)
