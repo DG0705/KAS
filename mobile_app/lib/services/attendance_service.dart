@@ -1,4 +1,3 @@
-import 'package:image_picker/image_picker.dart';
 import '../models/attendance_record.dart';
 import 'api_client.dart';
 
@@ -8,16 +7,25 @@ class AttendanceService {
   final ApiClient _apiClient;
 
   Future<AttendanceRecord> punchIn({
-    required XFile selfie,
     required AttendanceType attendanceType,
+    double? lat,
+    double? lon,
   }) async {
-    final json = await _apiClient.postMultipart(
+    // Build the JSON body
+    final Map<String, dynamic> requestBody = {
+      'attendance_type': attendanceType.value,
+    };
+
+    // If it's a site punch-in, attach the coordinates
+    if (attendanceType.value == 'site' && lat != null && lon != null) {
+      requestBody['latitude'] = lat;
+      requestBody['longitude'] = lon;
+    }
+
+    // Send as a standard JSON request instead of multipart
+    final json = await _apiClient.postJson(
       '/attendance/punch-in/',
-      fields: {
-        'attendance_type': attendanceType.value,
-      },
-      fileField: 'selfie',
-      file: selfie,
+      requestBody,
     );
 
     return AttendanceRecord.fromJson(json['attendance'] as Map<String, dynamic>);
@@ -40,33 +48,17 @@ class AttendanceService {
     required String clientName,
     required double lat,
     required double lon,
-    XFile? selfie, // 🚨 Added optional selfie
   }) async {
-    if (selfie != null) {
-      // 🚨 Send as Multipart if we have a selfie (First meeting of the day)
-      final json = await _apiClient.postMultipart(
-        '/attendance/site-checkin/',
-        fields: {
-          'client_name': clientName,
-          'check_in_latitude': lat.toString(),
-          'check_in_longitude': lon.toString(),
-        },
-        fileField: 'selfie',
-        file: selfie,
-      );
-      return json;
-    } else {
-      // Send as JSON if no selfie is needed (Already punched in)
-      final json = await _apiClient.postJson(
-        '/attendance/site-checkin/',
-        {
-          'client_name': clientName,
-          'check_in_latitude': lat,
-          'check_in_longitude': lon,
-        },
-      );
-      return json as Map<String, dynamic>;
-    }
+    // Send as JSON since the selfie is no longer needed
+    final json = await _apiClient.postJson(
+      '/attendance/site-checkin/',
+      {
+        'client_name': clientName,
+        'check_in_latitude': lat,
+        'check_in_longitude': lon,
+      },
+    );
+    return json as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> checkOutOfClient(String notes) async {

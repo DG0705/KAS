@@ -62,7 +62,7 @@ class _SiteVisitScreenState extends State<SiteVisitScreen> {
         clientName: _clientNameController.text.trim(), 
         lat: position.latitude, 
         lon: position.longitude,
-        selfie: selfie, // 🚨 Pass the selfie if it was provided
+        // selfie: selfie, // 🚨 Pass the selfie if it was provided
       );
 
       if (!mounted) return;
