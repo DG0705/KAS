@@ -48,7 +48,11 @@ class _PunchInScreenState extends State<PunchInScreen> {
       return null;
     }
 
-    return await Geolocator.getCurrentPosition();
+    return await Geolocator.getCurrentPosition(
+    locationSettings: const LocationSettings(
+      accuracy: LocationAccuracy.best,
+    ),
+    );
   }
 
   Future<void> _submit() async {

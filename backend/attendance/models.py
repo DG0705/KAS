@@ -35,15 +35,15 @@ class Attendance(models.Model):
     punch_out = models.DateTimeField(null=True, blank=True)
     
     latitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
+        max_digits=20,
+        decimal_places=15,
         validators=[MinValueValidator(Decimal("-90")), MaxValueValidator(Decimal("90"))],
         null=True, 
         blank=True
     )
     longitude = models.DecimalField(
-        max_digits=9,
-        decimal_places=6,
+        max_digits=20,
+        decimal_places=15,
         validators=[MinValueValidator(Decimal("-180")), MaxValueValidator(Decimal("180"))],
         null=True, 
         blank=True
@@ -127,8 +127,8 @@ class SiteVisit(models.Model):
     arrived_at = models.DateTimeField(default=timezone.now)
     departed_at = models.DateTimeField(blank=True, null=True)
     
-    check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    check_in_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_in_latitude = models.DecimalField(max_digits=20, decimal_places=15, null=True, blank=True)
+    check_in_longitude = models.DecimalField(max_digits=20, decimal_places=15, null=True, blank=True)
     
     status = models.CharField(max_length=20, choices=VisitStatus.choices, default=VisitStatus.IN_PROGRESS)
     created_at = models.DateTimeField(auto_now_add=True)
