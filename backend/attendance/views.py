@@ -104,12 +104,11 @@ class SiteVisitCheckInView(APIView):
         employee = request.user
         open_attendance = get_open_attendance(employee)
 
-        # 1. SMART AUTO-PUNCH: If no open shift, create one using coordinates
+        # 1. If the user doesn't have an open shift, punch them in automatically
         if not open_attendance:
             data = request.data.copy() if hasattr(request.data, 'copy') else request.data
             data['attendance_type'] = 'site' 
             
-            # Map the FFM coordinates to the base Attendance record
             if data.get('check_in_latitude'):
                 data['latitude'] = data.get('check_in_latitude')
             if data.get('check_in_longitude'):
@@ -122,15 +121,7 @@ class SiteVisitCheckInView(APIView):
             punch_in_serializer.is_valid(raise_exception=True)
             open_attendance = punch_in_serializer.save()
 
-        # 2. Block concurrent meetings
-        active_meeting = SiteVisit.objects.filter(employee=employee, status=SiteVisit.VisitStatus.IN_PROGRESS).first()
-        if active_meeting:
-            return Response(
-                {"detail": f"You are already in a meeting with {active_meeting.client_name}. Please check out first."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # 3. Create the specific Client Visit
+        # 2. Extract visit data
         client_name = request.data.get('client_name')
         lat = request.data.get('check_in_latitude')
         lon = request.data.get('check_in_longitude')
@@ -138,19 +129,21 @@ class SiteVisitCheckInView(APIView):
         if not client_name:
             return Response({"detail": "Client name is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 3. Log the visit and immediately mark it as COMPLETED (No checkout required)
         visit = SiteVisit.objects.create(
             employee=employee,
             attendance=open_attendance,
             client_name=client_name,
             check_in_latitude=lat,
-            check_in_longitude=lon
+            check_in_longitude=lon,
+            status=SiteVisit.VisitStatus.COMPLETED  # Auto-completes the visit
         )
 
         return Response({
-            "message": "Checked into client site successfully.",
+            "message": "Site visit logged successfully.",
             "visit": SiteVisitSerializer(visit).data
         }, status=status.HTTP_201_CREATED)
-
+    
 class SiteVisitCheckOutView(APIView):
     permission_classes = (IsAuthenticated,)
     parser_classes = (JSONParser, MultiPartParser, FormParser)

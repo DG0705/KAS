@@ -155,6 +155,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # --- 🚨 THE PERMANENT STATIC FILES CONFIGURATION ---
 
 STATIC_URL = '/static/'
+import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
